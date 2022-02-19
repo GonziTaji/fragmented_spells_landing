@@ -4,9 +4,9 @@ import type { NextPage } from "next";
 interface NavItemProps { href: string, text: string }
 const NavItem = (props: NavItemProps) => (
     <li>
-        <a href={props.href}>
+        <Link href={props.href}>
             {props.text}
-        </a>
+        </Link>
     </li>
 )
 
@@ -17,16 +17,17 @@ const Logo = (props: LogoProps) => (
 )
 
 interface BrandProps {};
-const Brand = (props: BrandProps) => (
-    <a 
-        className="flex items-center"
+const Brand = (props: BrandProps) => ( 
+    <Link 
         href="/"
     >
-        <Logo />
-        <span>
-            Fragmented spells
-        </span>
-    </a>
+        <a className="flex items-center">
+            <Logo />
+            <span>
+                Fragmented spells
+            </span>
+        </a>
+    </Link>
 )
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -42,6 +43,7 @@ const Header = () => {
         { label: 'Home', href: '#' },
         { label: 'Presale', href: '#' },
         { label: 'Whitepaper', href: '#' },
+        { label: 'About us', href: '#' },
     ]
 
     return (
@@ -79,6 +81,7 @@ const Header = () => {
                     duration-300
                     p-4
                     fixed top-0
+                    z-50
                     ${menuShown ? 'left-0' : 'left-full'}
                 `}
             >
@@ -152,6 +155,7 @@ import sobrePng from '../public/sobre.png';
 import metamaskLogoPng from '../public/metamask_logo.png';
 import presaleStyles from "../styles/Presale.module.css";
 import Image from "next/image";
+import Link from "next/link";
 const Presale = () => (
     <div className="bg-gray-100" id="presale">
         <h1 className="text-5xl text-center leading-loose">
@@ -160,7 +164,7 @@ const Presale = () => (
         
         <div className="flex justify-center">
             <div className={`w-1/3 ${presaleStyles.sobre}`}>
-                <Image className="rotate-6" src={sobrePng} layout="intrinsic"/>
+                <Image alt="pack" className="rotate-6" src={sobrePng} layout="intrinsic"/>
             </div>
         </div>
 
@@ -180,7 +184,7 @@ const Presale = () => (
 
             <HomeButton type="button" className="w-28 flex items-center justify-between" >
                 <span>Buy now</span>
-                <Image src={metamaskLogoPng} width={20} height={20} />
+                <Image alt="metamask_logo" src={metamaskLogoPng} width={20} height={20} />
             </HomeButton>
         </div>
 

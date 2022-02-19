@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:verbose": "next build --debug",
     "start": "next start",
     "lint": "next lint"
   },
