@@ -3,7 +3,18 @@ import { faBars, faTimes } from "@fortawesome/free-solid-svg-icons";
 import NavItem from "./navItem.component";
 import Logo from "./logo.component";
 import Brand from "./brand.component";
-import { useState } from "react";
+import { useContext, useState } from "react";
+import { Web3Context } from "./web3ContextProvider";
+import HomeButton from "./homeButton.component";
+
+const Web3Widget = () => {
+    const { disconnect, address } = useContext(Web3Context);
+
+    return <div className="text-sm">
+        <span className="block">{address.slice(0, 10)}...</span>
+        <button className="" type="button" onClick={disconnect}>Disconnect</button>
+    </div>
+}
 
 const Header = () => {
     const [ menuShown, setMenuShown ] = useState(false);
@@ -16,23 +27,44 @@ const Header = () => {
         { label: 'Presale', href: '#' },
         { label: 'Whitepaper', href: '#' },
         { label: 'About us', href: '#' },
-    ]
+    ];
+
+    const { connected, connect, address } = useContext(Web3Context);
+
+    const ConnectButton = (
+        <HomeButton type="button" onClick={connect}>
+            Connect
+        </HomeButton>
+    )
 
     return (
         <div className={`
+            z-10
+            sticky top-0
             bg-gray-200
-            py-2 px-4
+            py-2 px-8
             flex items-center justify-between
             text-2xl
         `}>
             <Brand />
 
             <nav className="hidden md:block">
-                <ul className="flex space-x-4">
+                <ul className="flex space-x-6">
                     {
                         menuEntries.map(({ label, href }, i) => (
                             <NavItem key={i} text={label} href={href} />
                         ))
+                    }
+                    {
+                        connected ?
+                        address &&
+                        <li> 
+                            <Web3Widget />
+                        </li>
+                        :
+                        <li> 
+                            { ConnectButton }
+                        </li>
                     }
                 </ul>
             </nav>
