@@ -2,38 +2,17 @@ import { Component, createContext, useEffect, useState } from "react";
 import Web3 from "web3";
 import { WebsocketProvider, IpcProvider, provider } from 'web3-core';
 import Web3Modal from "web3modal";
+import { Modal } from "./modal.component";
 
 interface IWeb3Context {
-    web3?: Web3 | null;
     provider: provider;
     connected: boolean;
+    connecting: boolean;
     address: string;
     chainId: number;
     networkId: number;
     connect: () => Promise<void>;
     disconnect: () => void;
-}
-
-interface PartialWeb3Context {
-    web3?: Web3 | null;
-    provider?: provider;
-    connected?: boolean;
-    address?: string;
-    chainId?: number;
-    networkId?: number;
-    connect?: () => Promise<void>;
-    disconnect?: () => void;
-}
-
-const web3InitialContext: IWeb3Context = {
-    web3: null,
-    provider: null,
-    connected: false,
-    address: '',
-    chainId: 0,
-    networkId: 0,
-    connect: () => Promise.resolve(),
-    disconnect: () => {},
 }
 
 const ethChains: { [label: string]: { network_id: number, chain_id: number, label: string } } = {
@@ -44,165 +23,196 @@ const ethChains: { [label: string]: { network_id: number, chain_id: number, labe
     },
 }
 
-export const Web3Context = createContext({...web3InitialContext});
+export const Web3Context = createContext<IWeb3Context>({
+    provider: null,
+    connected: false,
+    connecting: false,
+    address: '',
+    chainId: 0,
+    networkId: 0,
+    connect: () => Promise.resolve(),
+    disconnect: () => {},
+});
 
-export const Web3ContextProvider = ({children}: { children: JSX.Element[] }): JSX.Element => {
-    const [ state, setState ] = useState({...web3InitialContext});
+interface Web3ContextProviderState {
+    web3: Web3 | null;
+    provider: any;
+    connected: boolean;
+    connecting: boolean;
+    address: string;
+    chainId: number;
+    networkId: number;
+}
 
-    const safeSetState = (newState: PartialWeb3Context) => setState(previousState => ({
-        ...previousState,
-        ...newState
-    }));
+const INITIAL_STATE: Web3ContextProviderState = {
+    web3: null,
+    provider: null,
+    connected: false,
+    connecting: false,
+    address: '',
+    chainId: 0,
+    networkId: 0,
+}
 
-    const disconnect = async () => {
-        if (state.provider) {
-            if ((state.provider as any).removeAllListeners) {
-                (state.provider as WebsocketProvider).removeAllListeners('accountsChanged');
-                (state.provider as WebsocketProvider).removeAllListeners('networkChanged');
-            }
+class Web3ContextProvider2 extends Component<any, Web3ContextProviderState> {
+    constructor(props: any) {
+        super(props);
 
-            if ((state.provider as any).removeAllListeners) {
-                (state.provider as WebsocketProvider).removeAllListeners('accountsChanged');
-                (state.provider as WebsocketProvider).removeAllListeners('networkChanged');
-            }
-
-            if ((state.provider as any).disconnect) {
-                (state.provider as WebsocketProvider).disconnect(1,'User disconnected');
-            }
-
-            if ((state.provider as any).reset) {
-                (state.provider as IpcProvider).reset();
-            }
-        }
-
-        setState({ ...web3InitialContext });
+        this.state = INITIAL_STATE;
     }
 
-    const ethEnabled = async () => {
-        if (window.ethereum) {
-            await window.ethereum.request({method: 'eth_requestAccounts'});
-            window.web3 = new Web3(window.ethereum);
-            return true;
-        }
+    web3Modal: Web3Modal | null = null;
 
-        return false;
+    public componentDidMount() {
+        const providerOptions = {
+            /* See Provider Options Section */
+        };
+
+        this.web3Modal = new Web3Modal({
+            network: "mainnet",
+            cacheProvider: false,
+            providerOptions
+        });
+
+        if (this.web3Modal.cachedProvider) {
+            // this.connect();
+            this.web3Modal.clearCachedProvider();
+        }
     }
 
-    const connect = async () => {
-        let web3 = state.web3;
-        let provider = null;
-        let networkId = 0;
-        let chainId = 0;
+    async connect() {
+        try {
+            this.setState({ connecting: true });
 
-        if (!web3) {
-            web3 = new Web3(Web3.givenProvider);
+            // show modal for at least 0.6 seconds
+            // showing and hiding something for 0.1 is horrible UX
+            await new Promise(resolve => setTimeout(resolve, 600));
 
-            if (!web3.currentProvider) {
-                alert('No web3 Provider. Try again after installing metamask: https://metamask.io/download/');
-                web3 = null;
-            } else {
-                networkId = await web3.eth.net.getId();
-                chainId = await web3.eth.getChainId();
+            console.log('connecting');
 
-                if (networkId !== ethChains.mainnet.network_id || chainId !== ethChains.mainnet.chain_id) {
-                    alert('Please connect to the ' + ethChains.mainnet.label);
-                    web3 = null;
-                    provider = null;
-                    networkId = 0;
-                    chainId = 0;
-                } else {   
-                    provider = web3.currentProvider;
+            const provider = await this.web3Modal?.connect();
+
+            const web3 = new Web3(provider);
+
+            const accounts = await web3.eth.requestAccounts();
+
+            if (!accounts.length) {
+                return this.disconnect();
+            }
+
+            const networkId = await web3.eth.net.getId();
+            const chainId = await web3.eth.getChainId();
+
+            if (networkId !== ethChains.mainnet.network_id || chainId !== ethChains.mainnet.chain_id) {
+                alert('Please connect to the ' + ethChains.mainnet.label);
+                return
+            } 
+
+            provider.on('close', () => {
+                console.log('on close');
+                this.disconnect()
+            });
+            provider.on('disconnect', () => {
+                console.log('on disconnect');
+                this.disconnect()
+            });
+
+            provider.on('accountsChanged', async () => {
+                console.log('on accountsChanged');
+                // not using param address because it give address in lowercase
+                if (web3) {
+                    const accounts = await web3.eth.getAccounts();
+                    const address = accounts[0];
+                    
+                    if (!address) {
+                        this.disconnect();
+                    } else {   
+                        this.setState({ address });
+                    }
                 }
-            }
-        }
+            });
 
-        if (web3 && provider) {
-            console.log('web3 & provider');          
+            provider.on('chainChanged', async () => {
+                console.log('on chainChanged');
+                // not using param address because it give address in lowercase
+                if (web3) {
+                    const networkId = await web3.eth.net.getId();
+                    const chainId = await web3.eth.getChainId();
 
-            await web3.eth.requestAccounts();
-    
-            const accounts = await web3.eth.getAccounts();
-            const address = accounts[0];
+                    this.setState({ networkId, chainId });
 
-            if ((provider as any).on) {
-                (provider as WebsocketProvider).on('accountsChanged', async () => {
-                    console.log('on accountsChanged');
-                    // not using param address because it give address in lowercase
-                    if (web3) {
-                        const accounts = await web3.eth.getAccounts();
-                        const address = accounts[0];
-                        
-                        safeSetState({ address });
-                    }
-                });
-
-                (provider as WebsocketProvider).on('networkChanged', async () => {
-                    console.log('on networkChanged');
-                    // not using param address because it give address in lowercase
-                    if (web3) {
-                        const networkId = await web3.eth.net.getId();
-                        const chainId = await web3.eth.getChainId();
-
-                        if (networkId !== ethChains.mainnet.network_id || chainId !== ethChains.mainnet.chain_id) {
-                            alert('Please connect to the ' + ethChains.mainnet.label);
-                            disconnect();
-                        } else {
-                            safeSetState({ networkId, chainId });
-                        }
-                    }
-                });
-            }
-    
-            safeSetState({
+                    // if (networkId !== ethChains.mainnet.network_id || chainId !== ethChains.mainnet.chain_id) {
+                    //     alert('Please connect to the ' + ethChains.mainnet.label);
+                    //     this.disconnect();
+                    // }
+                }
+            });
+        
+            this.setState({
                 web3,
                 provider,
                 connected: true,
-                address,
+                connecting: false,
+                address: accounts[0],
                 chainId,
                 networkId
             });
+        } catch (e: any) {
+            console.log({ ...e });
+            console.log(e.code, e.message);
+
+            this.disconnect().then(alert.bind(null, e.message));
         }
     }
 
-    const invokeModal = async () => {
-        const providerOptions = {
-            /* See Provider Options Section */
-          };
-          
-        const web3Modal = new Web3Modal({
-            network: "mainnet", // optional
-            cacheProvider: false,
-            providerOptions // required
-        });
+    async disconnect() {
+        console.log('disconnecting');
+        const { provider } = this.state;
 
-        web3Modal.clearCachedProvider();
+        if (provider) {
+            if (provider.removeAllListeners) {
+                console.log('removing listeners');
+                provider.removeAllListeners('accountsChanged');
+                provider.removeAllListeners('networkChanged');
+            }
 
-        
-        console.log('connecting');
-        const provider = await web3Modal.connect();
+            if (provider.close) {
+                await provider.close();
+            }
+        }
 
-        console.log('connected');
+        this.web3Modal?.clearCachedProvider();
 
-        await provider.enable();
-    
-        console.log('enabled');
-
-        const web3 = new Web3(provider);
-
-        const accounts = await web3.eth.requestAccounts();
-
-        console.log({ accounts });
+        this.setState(INITIAL_STATE);
     }
 
-    const context = {
-        ...state,
-        connect: invokeModal,
-        disconnect
-    }
+    render() {
+        const context: IWeb3Context = {
+            provider: this.state.provider,
+            connected: this.state.connected,
+            connecting: this.state.connecting,
+            address: this.state.address,
+            chainId: this.state.chainId,
+            networkId: this.state.networkId,
+            connect: this.connect.bind(this),
+            disconnect: this.disconnect.bind(this)
+        }
 
-    return (
-        <Web3Context.Provider value={context}>
-            {children}
-        </Web3Context.Provider>
-    )
+        return (
+            <Web3Context.Provider value={context}>
+                {this.props.children}
+
+                <Modal
+                    content={
+                        <span className="block text-center">
+                            Waiting for connection with web3 provider...
+                        </span>
+                    }
+                    show={this.state.connecting}
+                ></Modal>
+            </Web3Context.Provider>
+        )
+    }
 }
+
+export default Web3ContextProvider2;

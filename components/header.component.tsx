@@ -11,7 +11,7 @@ const Web3Widget = () => {
     const { disconnect, address } = useContext(Web3Context);
 
     return <div className="text-sm">
-        <span className="block">{address.slice(0, 10)}...</span>
+        <span className="block">{address?.slice(0, 10)}...</span>
         <button className="" type="button" onClick={disconnect}>Disconnect</button>
     </div>
 }
@@ -56,8 +56,8 @@ const Header = () => {
                         ))
                     }
                     {
-                        connected ?
-                        address &&
+                        connected && address ?
+                        
                         <li> 
                             <Web3Widget />
                         </li>
