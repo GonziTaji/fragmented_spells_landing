@@ -5,6 +5,8 @@ import Image from "next/image";
 import HomeButton from './homeButton.component';
 import { Web3Context } from './web3ContextProvider';
 import React, { ChangeEvent, useContext, useState } from 'react';
+import { MyToken } from '../contracts/contractLocations.json';
+import MyTokenAbi from '../contracts/abi/MyToken.abi.json';
 
 interface PresaleFormProps {}
 const PresaleForm = (props: PresaleFormProps) => {
@@ -15,22 +17,24 @@ const PresaleForm = (props: PresaleFormProps) => {
     const currency = 'BUSD';
 
     const getAmount = () => quantity * price
-    console.log('address on component', address);
-    console.log({ connected });
 
-    async function mint() {
+    async function callContract() {
         // console.log('sadress', _address);
         if (!connected) {
-            await connect();
+            return;
+            
+        }
 
-            console.log({ web3 });
+        console.log({ web3 });
 
-            const _address = await web3?.eth.getAccounts();
-            console.log({ _address });
+        if (web3) {
+            const MyTokenContract = new web3.eth.Contract(MyTokenAbi as any, MyToken);
 
-            if (!_address) {
-                return;
-            }
+            // console.log(MyTokenContract);
+
+            const precio = await  MyTokenContract.methods.precio().call();
+
+            console.log('MyToken precio: ' + precio);
         }
 
         alert(getAmount());
@@ -50,12 +54,12 @@ const PresaleForm = (props: PresaleFormProps) => {
                 <small> {currency} {price} each </small>
             </span>
 
-            <input type="number" onChange={onChangeQuantity} className="w-16 mx-2 border rounded p-2" />
+            <input type="number" value={quantity} onChange={onChangeQuantity} className="w-16 mx-2 border rounded p-2" />
 
             {
                 connected
                 ? ( 
-                    <HomeButton type="button" className="w-28 flex items-center justify-between" onClick={mint}>
+                    <HomeButton type="button" className="w-28 flex items-center justify-between" onClick={callContract}>
                         <span>Buy now</span>
                         <Image alt="metamask_logo" src={metamaskLogoPng} width={20} height={20} />
                     </HomeButton>
