@@ -3,6 +3,71 @@ import metamaskLogoPng from '../public/metamask_logo.png';
 import presaleStyles from "../styles/Presale.module.css";
 import Image from "next/image";
 import HomeButton from './homeButton.component';
+import { Web3Context } from './web3ContextProvider';
+import React, { ChangeEvent, useContext, useState } from 'react';
+
+interface PresaleFormProps {}
+const PresaleForm = (props: PresaleFormProps) => {
+    const [ quantity, setQuantity ] = useState(1);
+    const { connected, connect, web3, address } = useContext(Web3Context);
+
+    const price = 5;
+    const currency = 'BUSD';
+
+    const getAmount = () => quantity * price
+    console.log('address on component', address);
+    console.log({ connected });
+
+    async function mint() {
+        // console.log('sadress', _address);
+        if (!connected) {
+            await connect();
+
+            console.log({ web3 });
+
+            const _address = await web3?.eth.getAccounts();
+            console.log({ _address });
+
+            if (!_address) {
+                return;
+            }
+        }
+
+        alert(getAmount());
+    }
+
+    function onChangeQuantity(e: ChangeEvent<HTMLInputElement>) {
+        const value = parseInt(e.currentTarget.value) || 0;
+        console.log({ value });
+
+        setQuantity(value);
+    }
+
+    return (
+        <div className="flex justify-center items-center">
+            <span>
+                {getAmount()} {currency}
+                <small> {currency} {price} each </small>
+            </span>
+
+            <input type="number" onChange={onChangeQuantity} className="w-16 mx-2 border rounded p-2" />
+
+            {
+                connected
+                ? ( 
+                    <HomeButton type="button" className="w-28 flex items-center justify-between" onClick={mint}>
+                        <span>Buy now</span>
+                        <Image alt="metamask_logo" src={metamaskLogoPng} width={20} height={20} />
+                    </HomeButton>
+                ) : (
+                    <HomeButton type="button" onClick={connect}>
+                        Connect
+                    </HomeButton>
+                )
+            }
+        </div>
+    );
+}
 
 const Presale = () => (
     <div className="bg-gray-100" id="presale">
@@ -16,25 +81,7 @@ const Presale = () => (
             </div>
         </div>
 
-        <div className="flex justify-center items-center">
-            <span>
-                $10 BUSD
-            </span>
-
-            <select className="w-16 mx-2 border rounded p-2">
-                <option>1</option>
-                <option>2</option>
-                <option>3</option>
-                <option>5</option>
-                <option>10</option>
-                <option>18</option>
-            </select>
-
-            <HomeButton type="button" className="w-28 flex items-center justify-between" >
-                <span>Buy now</span>
-                <Image alt="metamask_logo" src={metamaskLogoPng} width={20} height={20} />
-            </HomeButton>
-        </div>
+        <PresaleForm />
 
         <div className="flex justify-around my-5 py-5 bg-yellow-100">
             <div>

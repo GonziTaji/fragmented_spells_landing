@@ -6,15 +6,7 @@ import Brand from "./brand.component";
 import { useContext, useState } from "react";
 import { Web3Context } from "./web3ContextProvider";
 import HomeButton from "./homeButton.component";
-
-const Web3Widget = () => {
-    const { disconnect, address } = useContext(Web3Context);
-
-    return <div className="text-sm">
-        <span className="block">{address?.slice(0, 10)}...</span>
-        <button className="" type="button" onClick={disconnect}>Disconnect</button>
-    </div>
-}
+import { Web3Widget } from "./web3Widget";
 
 const Header = () => {
     const [ menuShown, setMenuShown ] = useState(false);
@@ -30,12 +22,6 @@ const Header = () => {
     ];
 
     const { connected, connect, address } = useContext(Web3Context);
-
-    const ConnectButton = (
-        <HomeButton type="button" onClick={connect}>
-            Connect
-        </HomeButton>
-    )
 
     return (
         <div className={`
@@ -55,17 +41,17 @@ const Header = () => {
                             <NavItem key={i} text={label} href={href} />
                         ))
                     }
-                    {
-                        connected && address ?
-                        
-                        <li> 
+                    <li>
+                        {
+                            connected && address
+                            ?
                             <Web3Widget />
-                        </li>
-                        :
-                        <li> 
-                            { ConnectButton }
-                        </li>
-                    }
+                            : 
+                            <HomeButton type="button" onClick={connect}>
+                                Connect
+                            </HomeButton>
+                        }
+                    </li>
                 </ul>
             </nav>
 

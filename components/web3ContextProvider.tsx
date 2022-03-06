@@ -1,11 +1,10 @@
-import { Component, createContext, useEffect, useState } from "react";
+import { Component, createContext } from "react";
 import Web3 from "web3";
-import { WebsocketProvider, IpcProvider, provider } from 'web3-core';
 import Web3Modal from "web3modal";
 import { Modal } from "./modal.component";
 
-interface IWeb3Context {
-    provider: provider;
+export interface IWeb3Context {
+    web3: Web3 | null;
     connected: boolean;
     connecting: boolean;
     address: string;
@@ -15,16 +14,23 @@ interface IWeb3Context {
     disconnect: () => void;
 }
 
-const ethChains: { [label: string]: { network_id: number, chain_id: number, label: string } } = {
+const ethChains: { [label: string]: { chain_id: number, label: string } } = {
     mainnet: {
-        network_id: 1,
         chain_id: 1,
         label: 'Ethereum main network',
+    },
+    smartChainTestnet: {
+        chain_id: 56,
+        label: 'Binance Smart Chain - Testnet'
+    },
+    smartChain: {
+        chain_id: 97,
+        label: 'Binance Smart Chain'
     },
 }
 
 export const Web3Context = createContext<IWeb3Context>({
-    provider: null,
+    web3: null,
     connected: false,
     connecting: false,
     address: '',
@@ -59,6 +65,8 @@ class Web3ContextProvider2 extends Component<any, Web3ContextProviderState> {
         super(props);
 
         this.state = INITIAL_STATE;
+
+        this.hideModal = this.hideModal.bind(this);
     }
 
     web3Modal: Web3Modal | null = null;
@@ -103,15 +111,11 @@ class Web3ContextProvider2 extends Component<any, Web3ContextProviderState> {
             const networkId = await web3.eth.net.getId();
             const chainId = await web3.eth.getChainId();
 
-            if (networkId !== ethChains.mainnet.network_id || chainId !== ethChains.mainnet.chain_id) {
-                alert('Please connect to the ' + ethChains.mainnet.label);
-                return
-            } 
-
             provider.on('close', () => {
                 console.log('on close');
                 this.disconnect()
             });
+
             provider.on('disconnect', () => {
                 console.log('on disconnect');
                 this.disconnect()
@@ -186,9 +190,13 @@ class Web3ContextProvider2 extends Component<any, Web3ContextProviderState> {
         this.setState(INITIAL_STATE);
     }
 
+    hideModal() {
+        this.setState({ connecting: false });
+    }
+
     render() {
         const context: IWeb3Context = {
-            provider: this.state.provider,
+            web3: this.state.web3,
             connected: this.state.connected,
             connecting: this.state.connecting,
             address: this.state.address,
@@ -207,6 +215,11 @@ class Web3ContextProvider2 extends Component<any, Web3ContextProviderState> {
                         <span className="block text-center">
                             Waiting for connection with web3 provider...
                         </span>
+                    }
+                    buttons={
+                        <button className="border-2 border-red-900 p-2 bg-red-600 text-white rounded" onClick={this.hideModal}>
+                            Hide
+                        </button>
                     }
                     show={this.state.connecting}
                 ></Modal>
